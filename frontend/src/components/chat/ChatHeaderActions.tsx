@@ -11,6 +11,7 @@ interface HeaderActionsProps {
   conversation: Conversation;
   currentUserId: string;
   isOnline: boolean;
+  onClose: () => void;
   onCloseSearch: () => void;
 }
 
