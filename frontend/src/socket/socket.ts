@@ -6,7 +6,7 @@ let socket: Socket | null = null;
 
 /** Creates (or returns the existing) authenticated socket connection. */
 export function connectSocket(token: string): Socket {
-  if (socket && socket.connected) return socket;
+  if (socket) return socket;
 
   socket = io(SOCKET_URL, {
     auth: { token },
@@ -15,6 +15,13 @@ export function connectSocket(token: string): Socket {
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
   });
+
+  if (import.meta.env.DEV) {
+    socket.on('connect', () => console.log('[SOCKET] connected'));
+    socket.on('disconnect', (reason) => console.log(`[SOCKET] disconnected reason=${reason}`));
+    socket.io.on('reconnect', (attempt) => console.log(`[SOCKET] reconnected attempt=${attempt}`));
+    socket.on('connect_error', (error) => console.log(`[SOCKET] connection error=${error.message}`));
+  }
 
   return socket;
 }

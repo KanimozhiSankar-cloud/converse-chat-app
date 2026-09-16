@@ -1,8 +1,8 @@
 import { api } from './api';
 import { Message } from '../types';
 
-export async function sendMessageRequest(conversationId: string, content: string): Promise<Message> {
-  const { data } = await api.post<Message>('/messages', { conversationId, content });
+export async function sendMessageRequest(conversationId: string, content: string, replyToId?: string): Promise<Message> {
+  const { data } = await api.post<Message>('/messages', { conversationId, content, replyToId });
   return data;
 }
 

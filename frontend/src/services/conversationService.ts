@@ -16,6 +16,18 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
   return data;
 }
 
+export async function markConversationReadRequest(conversationId: string): Promise<void> {
+  await api.put(`/conversations/${conversationId}/read`);
+}
+
+export async function clearConversationRequest(conversationId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}/messages`);
+}
+
+export async function deleteConversationRequest(conversationId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}`);
+}
+
 export async function searchConversationMessages(conversationId: string, query: string): Promise<Message[]> {
   const { data } = await api.get<Message[]>(`/conversations/${conversationId}/messages/search`, { params: { q: query } });
   return data;

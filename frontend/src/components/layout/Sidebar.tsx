@@ -79,7 +79,7 @@ export function Sidebar({
           : c.participants.find((p) => p._id !== user?._id)?.name ?? '';
       return name.toLowerCase().includes(query);
     });
-  }, [conversations, search, user?._id]);
+  }, [chatFilter, conversations, search, user?._id]);
 
   return (
     <aside className={classNames('h-full w-full max-w-[22rem] flex-col border-r border-token bg-raised/70 md:flex', isConversationOpen ? 'hidden' : 'flex')}>

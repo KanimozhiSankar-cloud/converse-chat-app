@@ -10,6 +10,9 @@ export interface IConversation extends Document {
   groupAvatar?: string;
   groupAdmin?: Types.ObjectId;
   lastMessage?: Types.ObjectId;
+  hiddenFor: Types.ObjectId[];
+  deletedAt: Array<{ userId: Types.ObjectId; at: Date }>;
+  clearedAt: Array<{ userId: Types.ObjectId; at: Date }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,11 +48,44 @@ const conversationSchema = new Schema<IConversation>(
       type: Schema.Types.ObjectId,
       ref: 'Message',
     },
+    hiddenFor: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    deletedAt: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        at: {
+          type: Date,
+          required: true,
+        },
+      },
+    ],
+    clearedAt: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        at: {
+          type: Date,
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
 
 // Speeds up "find conversations for this user" queries.
 conversationSchema.index({ participants: 1 });
+conversationSchema.index({ hiddenFor: 1 });
 
 export const Conversation = model<IConversation>('Conversation', conversationSchema);

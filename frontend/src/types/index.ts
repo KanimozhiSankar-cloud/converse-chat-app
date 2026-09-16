@@ -35,6 +35,7 @@ export interface Message {
   _id: string;
   conversationId: string;
   sender: User;
+  replyTo?: Pick<Message, '_id' | 'content'> & { sender: User };
   content: string;
   readBy: string[];
   createdAt: string;

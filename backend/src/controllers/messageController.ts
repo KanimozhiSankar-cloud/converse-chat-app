@@ -2,16 +2,19 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { deleteMessage, editMessage, markMessageAsRead, sendMessage } from '../services/messageService';
 import { ApiError } from '../utils/ApiError';
-import { getIO } from '../socket';
+import { emitMessageToParticipants, getIO } from '../socket';
 
 export const postMessage = asyncHandler(async (req: Request, res: Response) => {
-  const { conversationId, content } = req.body as { conversationId: string; content: string };
+  const { conversationId, content, replyToId } = req.body as { conversationId: string; content: string; replyToId?: string };
   if (!conversationId) throw ApiError.badRequest('conversationId is required');
 
-  const message = await sendMessage({ conversationId, senderId: req.userId as string, content });
+  const message = await sendMessage({ conversationId, senderId: req.userId as string, content, replyToId });
 
-  // Broadcast to everyone in the conversation room in real time.
-  getIO().to(conversationId).emit('message:receive', message);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[SOCKET] message created messageId=${message._id} conversationId=${conversationId} senderId=${req.userId}`);
+  }
+  await emitMessageToParticipants(conversationId, message);
+  if (process.env.NODE_ENV !== 'production') console.log('[SOCKET] emitted event=message:receive');
 
   res.status(201).json(message);
 });

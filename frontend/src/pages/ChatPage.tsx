@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MessageCircleMore } from 'lucide-react';
 import { Sidebar } from '../components/layout/Sidebar';
 import { ChatWindow } from '../components/chat/ChatWindow';
@@ -8,9 +8,13 @@ import { startPrivateConversation } from '../services/conversationService';
 import { getErrorMessage } from '../services/api';
 
 export function ChatPage() {
-  const { conversations, isLoading, error, reload, clearUnread, upsertConversation } = useConversations();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const { conversations, isLoading, error, reload, clearUnread, removeConversation } = useConversations(activeConversationId, setActiveConversationId);
+
+  useEffect(() => {
+    if (activeConversationId) clearUnread(activeConversationId);
+  }, [activeConversationId, clearUnread]);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c._id === activeConversationId) ?? null,
@@ -26,7 +30,7 @@ export function ChatPage() {
     setStartError(null);
     try {
       const conversation = await startPrivateConversation(userId);
-      upsertConversation({ ...conversation, unreadCount: conversation.unreadCount ?? 0 });
+      await reload();
       selectConversation(conversation._id);
     } catch (err) {
       setStartError(getErrorMessage(err));
@@ -52,7 +56,7 @@ export function ChatPage() {
 
       {activeConversation ? (
         <div className="glass-panel flex h-full flex-1 overflow-hidden md:rounded-3xl">
-          <ChatWindow key={activeConversation._id} conversation={activeConversation} onBack={() => setActiveConversationId(null)} />
+          <ChatWindow key={activeConversation._id} conversation={activeConversation} onBack={() => setActiveConversationId(null)} onConversationDeleted={() => { removeConversation(activeConversation._id); setActiveConversationId(null); }} />
         </div>
       ) : (
         <div className="hidden flex-1 md:block">

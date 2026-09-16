@@ -12,9 +12,11 @@ interface Props {
   isOnline: boolean;
   onBack?: () => void;
   onSearchResult?: (messageId: string) => void;
+  onClearChat?: () => void;
+  onDeleteChat?: () => void;
 }
 
-export function ChatHeader({ conversation, currentUserId, isOnline, onBack, onSearchResult }: Props) {
+export function ChatHeader({ conversation, currentUserId, isOnline, onBack, onSearchResult, onClearChat, onDeleteChat }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [callMode, setCallMode] = useState<'voice' | 'video' | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -53,7 +55,7 @@ export function ChatHeader({ conversation, currentUserId, isOnline, onBack, onSe
   }, [menuOpen]);
 
   return (
-    <div ref={headerRef} className="glass-subtle relative z-[var(--z-header)] flex min-h-[73px] items-center gap-3 border-x-0 border-t-0 px-5 py-4 md:px-7">
+    <div ref={headerRef} className="glass-subtle relative z-[var(--z-dropdown)] flex min-h-[73px] items-center gap-3 border-x-0 border-t-0 px-5 py-4 md:px-7">
       {searchOpen ? (
         <MessageSearch conversation={conversation} onCloseSearch={() => setSearchOpen(false)} onSelectMessage={onSearchResult} />
       ) : <>
@@ -73,12 +75,10 @@ export function ChatHeader({ conversation, currentUserId, isOnline, onBack, onSe
         </button>
         <div className="ml-auto flex shrink-0 items-center gap-1">
         <button type="button" onClick={openSearch} aria-label="Search messages" title="Search messages" className="flex h-9 w-9 items-center justify-center rounded-xl text-secondary transition hover:bg-ink-800 hover:text-accent"><Search className="h-4 w-4" /></button>
-        <button type="button" onClick={() => setCallMode('voice')} aria-label="Start voice call" title="Voice call" className="flex h-9 w-9 items-center justify-center rounded-xl text-secondary transition hover:bg-ink-800 hover:text-accent"><Phone className="h-4 w-4" /></button>
-        <button type="button" onClick={() => setCallMode('video')} aria-label="Start video call" title="Video call" className="flex h-9 w-9 items-center justify-center rounded-xl text-secondary transition hover:bg-ink-800 hover:text-accent"><Video className="h-4 w-4" /></button>
-        <button type="button" onClick={() => setMenuOpen((current) => !current)} aria-label="Open conversation options" title="More options" className="flex h-9 w-9 items-center justify-center rounded-xl text-secondary transition hover:bg-ink-800 hover:text-accent"><MoreHorizontal className="h-4 w-4" /></button>
+         <button type="button" onClick={() => setMenuOpen((current) => !current)} aria-label="Open conversation options" title="More options" className="flex h-9 w-9 items-center justify-center rounded-xl text-secondary transition hover:bg-ink-800 hover:text-accent"><MoreHorizontal className="h-4 w-4" /></button>
         </div>
       </>}
-      {menuOpen && <HeaderMenu conversationId={conversation._id} onContact={() => { setMenuOpen(false); setContactOpen(true); }} onSearch={openSearch} />}
+      {menuOpen && <HeaderMenu conversationId={conversation._id} onContact={() => { setMenuOpen(false); setContactOpen(true); }} onSearch={openSearch} onClear={onClearChat} onDelete={onDeleteChat} />}
       {callMode && <CallModal conversation={conversation} currentUserId={currentUserId} mode={callMode} onClose={() => setCallMode(null)} />}
       {contactOpen && <ContactPanel conversation={conversation} currentUserId={currentUserId} isOnline={isOnline} onClose={() => setContactOpen(false)} onCloseSearch={() => setSearchOpen(false)} onSearch={openSearch} />}
     </div>

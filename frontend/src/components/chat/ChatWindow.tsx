@@ -10,16 +10,24 @@ import { ErrorBanner } from '../common/ErrorBanner';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { getErrorMessage } from '../../services/api';
+import { deleteConversationRequest } from '../../services/conversationService';
 
-export function ChatWindow({ conversation, onBack }: { conversation: Conversation; onBack?: () => void }) {
+function getReplyPreview(content: string): string {
+  const match = content.match(/^Replying to "[^"]+": (.*)$/);
+  return match ? match[1] : content;
+}
+
+export function ChatWindow({ conversation, onBack, onConversationDeleted }: { conversation: Conversation; onBack?: () => void; onConversationDeleted?: () => void }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { socket, onlineUserIds } = useSocketContext();
-  const { messages, isLoading, error, isSending, typingUserId, sendMessage, updateMessage, removeMessage } = useMessages(conversation._id);
+  const { messages, isLoading, error, isSending, typingUserId, sendMessage, updateMessage, removeMessage, clearMessages } = useMessages(conversation._id);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [conversationAction, setConversationAction] = useState<'clear' | 'delete' | null>(null);
+  const [isConversationActionPending, setIsConversationActionPending] = useState(false);
 
   const other =
     conversation.type === 'private'
@@ -51,6 +59,25 @@ export function ChatWindow({ conversation, onBack }: { conversation: Conversatio
     }
   }
 
+  async function handleConversationAction() {
+    if (!conversationAction) return;
+    setIsConversationActionPending(true);
+    try {
+      if (conversationAction === 'clear') {
+        await clearMessages();
+        showToast('Chat cleared');
+      } else {
+        await deleteConversationRequest(conversation._id);
+        onConversationDeleted?.();
+      }
+      setConversationAction(null);
+    } catch (actionError) {
+      showToast(getErrorMessage(actionError) || 'Unable to update this chat.', 'error');
+    } finally {
+      setIsConversationActionPending(false);
+    }
+  }
+
   const highlightSearchResult = useCallback((messageId: string) => {
     setHighlightedMessageId(messageId);
     window.setTimeout(() => setHighlightedMessageId((current) => current === messageId ? null : current), 1800);
@@ -58,7 +85,7 @@ export function ChatWindow({ conversation, onBack }: { conversation: Conversatio
 
   return (
     <div className="app-shell relative flex h-full flex-1 flex-col overflow-hidden">
-      <ChatHeader conversation={conversation} currentUserId={user?._id ?? ''} isOnline={isOnline} onBack={onBack} onSearchResult={highlightSearchResult} />
+      <ChatHeader conversation={conversation} currentUserId={user?._id ?? ''} isOnline={isOnline} onBack={onBack} onSearchResult={highlightSearchResult} onClearChat={() => setConversationAction('clear')} onDeleteChat={() => setConversationAction('delete')} />
 
       {error && (
         <div className="px-5 pt-3 md:px-7">
@@ -67,15 +94,15 @@ export function ChatWindow({ conversation, onBack }: { conversation: Conversatio
       )}
 
       <MessageList messages={messages} currentUserId={user?._id ?? ''} isLoading={isLoading} onEdit={handleEdit} onDeleteRequest={setMessageToDelete} onReply={setReplyTo} highlightedMessageId={highlightedMessageId} />
-      {typingUserId && <p className="px-7 pb-2 text-xs text-secondary"><span className="mr-1 inline-flex gap-0.5 align-middle"><i className="h-1 w-1 animate-pulse rounded-full bg-accent" /><i className="h-1 w-1 animate-pulse rounded-full bg-accent [animation-delay:120ms]" /><i className="h-1 w-1 animate-pulse rounded-full bg-accent [animation-delay:240ms]" /></span>Typing...</p>}
+      {typingUserId && <p className="px-7 pb-2 text-xs text-secondary"> Typing <span className="mr-1 inline-flex gap-0.5 align-middle"><i className="h-1 w-1 animate-pulse rounded-full bg-accent" /><i className="h-1 w-1 animate-pulse rounded-full bg-accent [animation-delay:120ms]" /><i className="h-1 w-1 animate-pulse rounded-full bg-accent [animation-delay:240ms]" /></span></p>}
       <MessageInput
         onSend={async (content) => {
-          await sendMessage(replyTo ? `Replying to "${replyTo.content}": ${content}` : content);
+          await sendMessage(content, replyTo?._id);
           setReplyTo(null);
         }}
         onTyping={(isTyping) => socket?.emit(isTyping ? 'typing:start' : 'typing:stop', conversation._id)}
         isSending={isSending}
-        replyTo={replyTo?.content}
+        replyTo={replyTo ? getReplyPreview(replyTo.content) : null}
         onClearReply={() => setReplyTo(null)}
       />
       <ConfirmDialog
@@ -86,6 +113,15 @@ export function ChatWindow({ conversation, onBack }: { conversation: Conversatio
         loading={isDeleting}
         onConfirm={handleDelete}
         onCancel={() => { if (!isDeleting) setMessageToDelete(null); }}
+      />
+      <ConfirmDialog
+        open={Boolean(conversationAction)}
+        title={conversationAction === 'delete' ? 'Delete this chat for you?' : 'Clear this chat for you?'}
+        description={conversationAction === 'delete' ? 'This removes the conversation from your chat list. Other participants will keep their conversation and messages.' : 'This hides the messages for you only. Other participants will keep their messages.'}
+        confirmText={conversationAction === 'delete' ? 'Delete chat' : 'Clear chat'}
+        loading={isConversationActionPending}
+        onConfirm={handleConversationAction}
+        onCancel={() => { if (!isConversationActionPending) setConversationAction(null); }}
       />
     </div>
   );

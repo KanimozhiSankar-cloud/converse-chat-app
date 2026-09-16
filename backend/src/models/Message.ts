@@ -4,6 +4,7 @@ export interface IMessage extends Document {
   _id: Types.ObjectId;
   conversationId: Types.ObjectId;
   sender: Types.ObjectId;
+  replyTo?: Types.ObjectId;
   content: string;
   readBy: Types.ObjectId[];
   createdAt: Date;
@@ -21,6 +22,10 @@ const messageSchema = new Schema<IMessage>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    replyTo: {
+      type: Schema.Types.ObjectId,
+      ref: 'Message',
     },
     content: {
       type: String,

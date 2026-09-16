@@ -4,10 +4,12 @@ import { User } from '../models/User';
 import { sendMessage } from '../services/messageService';
 import { onlineUsers } from './onlineUsers';
 import { AuthenticatedSocket } from './index';
+import { emitMessageToParticipants } from './index';
 
 interface MessageSendPayload {
   conversationId: string;
   content: string;
+  replyToId?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function registerSocketHandlers(io: Server, socket: AuthenticatedSocket):
       return;
     }
     socket.join(conversationId);
+    if (process.env.NODE_ENV !== 'production') console.log(`[SOCKET] joined conversation=${conversationId} userId=${userId}`);
     ack?.({ success: true });
   });
 
@@ -40,8 +43,12 @@ export function registerSocketHandlers(io: Server, socket: AuthenticatedSocket):
         conversationId: payload.conversationId,
         senderId: userId,
         content: payload.content,
+        replyToId: payload.replyToId,
       });
-      io.to(payload.conversationId).emit('message:receive', message);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[SOCKET] message created messageId=${message._id} conversationId=${payload.conversationId} senderId=${userId}`);
+      }
+      await emitMessageToParticipants(payload.conversationId, message);
       ack?.({ success: true, message });
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : 'Failed to send message';
@@ -68,11 +75,16 @@ export function registerSocketHandlers(io: Server, socket: AuthenticatedSocket):
 
 async function handleConnect(io: Server, socket: AuthenticatedSocket, userId: string): Promise<void> {
   const wasOffline = onlineUsers.addSocket(userId, socket.id);
+  socket.join(userId);
+  if (process.env.NODE_ENV !== 'production') console.log(`[SOCKET] joined user room=${userId}`);
 
   // Auto-join every conversation the user belongs to so messages arrive
   // without an extra round trip after connecting.
   const conversations = await Conversation.find({ participants: userId }).select('_id');
-  conversations.forEach((conversation) => socket.join(conversation._id.toString()));
+  conversations.forEach((conversation) => {
+    socket.join(conversation._id.toString());
+    if (process.env.NODE_ENV !== 'production') console.log(`[SOCKET] joined conversation=${conversation._id} userId=${userId}`);
+  });
 
   // Send the current snapshot of online users to the newly connected client.
   socket.emit('online:users', onlineUsers.getOnlineUserIds());
