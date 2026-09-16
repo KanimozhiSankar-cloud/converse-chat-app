@@ -80,7 +80,7 @@ export function ChatHeader({ conversation, currentUserId, isOnline, onBack, onSe
       </>}
       {menuOpen && <HeaderMenu conversationId={conversation._id} onContact={() => { setMenuOpen(false); setContactOpen(true); }} onSearch={openSearch} onClear={onClearChat} onDelete={onDeleteChat} />}
       {callMode && <CallModal conversation={conversation} currentUserId={currentUserId} mode={callMode} onClose={() => setCallMode(null)} />}
-      {contactOpen && <ContactPanel conversation={conversation} currentUserId={currentUserId} isOnline={isOnline} onClose={() => setContactOpen(false)} onCloseSearch={() => setSearchOpen(false)} onSearch={openSearch} />}
+      {contactOpen && <ContactPanel conversation={conversation} currentUserId={currentUserId} isOnline={isOnline} onClose={() => setContactOpen(false)} onSearch={openSearch} />}
     </div>
   );
 }

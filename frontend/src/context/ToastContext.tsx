@@ -29,7 +29,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, showMessageToast }}>
       {children}
       <div className="pointer-events-none fixed bottom-4 right-4 z-[var(--z-toast)] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-3" aria-live="polite">
         {toasts.map((toast) => (
